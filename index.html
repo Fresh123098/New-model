@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Fresh & Clean Laundry | POS System</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 20px; }
+        .pos-container { max-width: 1600px; margin: 0 auto; display: grid; grid-template-columns: 1fr 380px; gap: 20px; }
+        .items-panel { background: white; border-radius: 24px; padding: 20px; }
+        .logo-header { text-align: center; margin-bottom: 25px; padding-bottom: 20px; border-bottom: 2px solid #1e3a8a; }
+        .logo-header h1 { font-size: 2rem; color: #1e3a8a; }
+        .logo-header h1 span { color: #ef4444; }
+        .shop-address { background: #f8fafc; padding: 10px; border-radius: 12px; margin-top: 10px; font-size: 0.8rem; }
+        .category-tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        .cat-btn { padding: 8px 20px; background: #f3f4f6; border: none; border-radius: 30px; cursor: pointer; }
+        .cat-btn.active { background: #1e3a8a; color: white; }
+        .items-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; max-height: 500px; overflow-y: auto; }
+        .item-card { background: #f9fafb; border-radius: 16px; padding: 12px; text-align: center; cursor: pointer; border: 1px solid #e5e7eb; position: relative; }
+        .item-card:hover { transform: translateY(-3px); border-color: #1e3a8a; }
+        .item-icon { font-size: 2rem; }
+        .item-name { font-size: 0.8rem; font-weight: 600; }
+        .item-price { font-size: 0.75rem; color: #ef4444; }
+        .edit-price { position: absolute; top: 5px; right: 5px; background: #e5e7eb; border-radius: 20px; padding: 2px 6px; font-size: 0.65rem; cursor: pointer; }
+        .cart-panel { background: white; border-radius: 24px; padding: 20px; position: sticky; top: 20px; }
+        .customer-section { margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #e5e7eb; }
+        .customer-section input { width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #e5e7eb; border-radius: 12px; }
+        .cart-items { max-height: 350px; overflow-y: auto; margin-bottom: 15px; }
+        .cart-item { display: grid; grid-template-columns: 2fr 0.8fr 1fr 0.3fr; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
+        .cart-item input { width: 60px; padding: 5px; border: 1px solid #e5e7eb; border-radius: 8px; text-align: center; }
+        .total-section { padding-top: 15px; border-top: 2px solid #e5e7eb; }
+        .total-row { display: flex; justify-content: space-between; padding: 8px 0; font-weight: bold; }
+        .grand-total { font-size: 1.3rem; color: #1e3a8a; }
+        .action-buttons { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+        .btn-print { flex: 1; background: #1e3a8a; color: white; border: none; padding: 12px; border-radius: 40px; cursor: pointer; font-weight: bold; }
+        .btn-whatsapp { flex: 1; background: #25D366; color: white; border: none; padding: 12px; border-radius: 40px; cursor: pointer; font-weight: bold; }
+        .btn-clear { background: #ef4444; color: white; border: none; padding: 12px; border-radius: 40px; cursor: pointer; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: white; padding: 30px; border-radius: 24px; text-align: center; }
+        .modal-content input { padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 8px; width: 200px; }
+        @media (max-width: 1000px) { .pos-container { grid-template-columns: 1fr; } }
+        
+        /* Print styles - optimized for Epson 80mm */
+        @media print {
+            body * { visibility: hidden; }
+            #printArea, #printArea * { visibility: visible; }
+            #printArea { 
+                position: absolute; 
+                top: 0; 
+                left: 0; 
+                width: 100%;
+                margin: 0;
+                padding: 8px;
+            }
+            @page { 
+                size: 80mm auto; 
+                margin: 0mm;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="pos-container">
+    <div class="items-panel">
+        <div class="logo-header">
+            <h1>FRESH <span>&</span> CLEAN<br>LAUNDRY</h1>
+            <div class="shop-address">
+                <i class="fas fa-map-marker-alt"></i> Block 228, Road 2811, Building 632, Shop 632a<br>
+                <i class="fas fa-location-dot"></i> Al Syah, Bahrain<br>
+                <i class="fas fa-phone"></i> +973 36817742
+            </div>
+        </div>
+        <div class="category-tabs" id="categoryTabs"></div>
+        <div class="items-grid" id="itemsGrid"></div>
+    </div>
+
+    <div class="cart-panel">
+        <div class="customer-section">
+            <h3><i class="fas fa-user"></i> Customer Details</h3>
+            <input type="text" id="customerName" placeholder="Customer Name" value="Shop Customer">
+            <input type="tel" id="customerPhone" placeholder="Phone Number" value="">
+        </div>
+        <h3><i class="fas fa-shopping-cart"></i> Order Items</h3>
+        <div class="cart-items" id="cartItems"></div>
+        <div class="total-section">
+            <div class="total-row"><span>Total:</span><span id="grandTotal">0.000 BHD</span></div>
+        </div>
+        <div class="action-buttons">
+            <button class="btn-print" onclick="printReceipt()"><i class="fas fa-print"></i> Print Receipt</button>
+            <button class="btn-whatsapp" onclick="sendWhatsApp()"><i class="fab fa-whatsapp"></i> WhatsApp</button>
+            <button class="btn-clear" onclick="clearCart()"><i class="fas fa-trash"></i> Clear</button>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden print area -->
+<div id="printArea" style="display: none;"></div>
+
+<div id="priceModal" class="modal">
+    <div class="modal-content">
+        <h3>Edit Price</h3>
+        <p id="editItemName"></p>
+        <input type="number" id="editPrice" step="0.1" placeholder="Price in BHD">
+        <br><br>
+        <button onclick="savePrice()" style="background:#1e3a8a; color:white; padding:10px 30px; border:none; border-radius:30px;">Save</button>
+        <button onclick="closeModal()" style="padding:10px 30px;">Cancel</button>
+    </div>
+</div>
+
+<script>
+    const itemsDatabase = {
+        "👕 Summer": [
+            { name: "Thawb (Summer)", icon: "👕", defaultPrice: 1.5 },
+            { name: "T-shirt", icon: "👕", defaultPrice: 0.8 },
+            { name: "Trouser/Pants", icon: "👖", defaultPrice: 0.8 },
+            { name: "Shirt", icon: "👔", defaultPrice: 0.8 },
+            { name: "Pyjamas", icon: "🩳", defaultPrice: 0.7 }
+        ],
+        "👗 Traditional": [
+            { name: "Abaya", icon: "👗", defaultPrice: 2.0 },
+            { name: "Silk Abaya", icon: "👗", defaultPrice: 3.0 },
+            { name: "Daraa/Galabieh", icon: "👘", defaultPrice: 1.8 },
+            { name: "Hijab/Scarf", icon: "🧣", defaultPrice: 0.6 }
+        ],
+        "🧥 Western": [
+            { name: "Jeans", icon: "👖", defaultPrice: 0.8 },
+            { name: "Jacket", icon: "🧥", defaultPrice: 1.2 },
+            { name: "Suit jacket", icon: "🤵", defaultPrice: 1.5 },
+            { name: "Coat", icon: "🧥", defaultPrice: 1.5 }
+        ],
+        "🛏️ Home": [
+            { name: "Bed Sheet (Single)", icon: "🛏️", defaultPrice: 1.0 },
+            { name: "Bed Sheet (Double)", icon: "🛏️", defaultPrice: 1.5 },
+            { name: "Pillow", icon: "🛏️", defaultPrice: 0.8 },
+            { name: "Blanket", icon: "🛌", defaultPrice: 2.0 },
+            { name: "Curtains", icon: "🚪", defaultPrice: 1.0 }
+        ],
+        "🧦 Accessories": [
+            { name: "Bath Towel", icon: "🧺", defaultPrice: 1.2 },
+            { name: "Socks", icon: "🧦", defaultPrice: 0.3 },
+            { name: "Underwear", icon: "🩲", defaultPrice: 0.4 }
+        ]
+    };
+
+    let customPrices = JSON.parse(localStorage.getItem('laundryPrices')) || {};
+    let cart = [];
+    let currentEditItem = null;
+
+    function renderCategories() {
+        const tabs = document.getElementById('categoryTabs');
+        const categories = Object.keys(itemsDatabase);
+        tabs.innerHTML = categories.map((cat, idx) => 
+            `<button class="cat-btn ${idx === 0 ? 'active' : ''}" onclick="selectCategory('${cat}', this)">${cat}</button>`
+        ).join('');
+        selectCategory(categories[0], document.querySelector('.cat-btn'));
+    }
+
+    function selectCategory(category, btn) {
+        document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        renderItems(category);
+    }
+
+    function renderItems(category) {
+        const grid = document.getElementById('itemsGrid');
+        const items = itemsDatabase[category];
+        if (!items) return;
+        grid.innerHTML = items.map(item => {
+            const price = customPrices[item.name] || item.defaultPrice;
+            return `
+                <div class="item-card" onclick="addToCart('${item.name.replace(/'/g, "\\'")}', ${price})">
+                    <div class="edit-price" onclick="event.stopPropagation(); openPriceModal('${item.name.replace(/'/g, "\\'")}', ${price})">✏️</div>
+                    <div class="item-icon">${item.icon}</div>
+                    <div class="item-name">${item.name}</div>
+                    <div class="item-price">${price.toFixed(3)} BHD</div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function openPriceModal(itemName, currentPrice) {
+        currentEditItem = itemName;
+        document.getElementById('editItemName').innerText = itemName;
+        document.getElementById('editPrice').value = currentPrice;
+        document.getElementById('priceModal').style.display = 'flex';
+    }
+
+    function savePrice() {
+        const newPrice = parseFloat(document.getElementById('editPrice').value);
+        if (!isNaN(newPrice) && newPrice > 0) {
+            customPrices[currentEditItem] = newPrice;
+            localStorage.setItem('laundryPrices', JSON.stringify(customPrices));
+            const activeCat = document.querySelector('.cat-btn.active').innerText;
+            renderItems(activeCat);
+        }
+        closeModal();
+    }
+
+    function closeModal() {
+        document.getElementById('priceModal').style.display = 'none';
+    }
+
+    function addToCart(itemName, price) {
+        const existing = cart.find(i => i.name === itemName);
+        if (existing) {
+            existing.qty++;
+        } else {
+            cart.push({ name: itemName, price: price, qty: 1 });
+        }
+        renderCart();
+    }
+
+    function updateQty(index, newQty) {
+        if (newQty <= 0) {
+            cart.splice(index, 1);
+        } else {
+            cart[index].qty = newQty;
+        }
+        renderCart();
+    }
+
+    function renderCart() {
+        const container = document.getElementById('cartItems');
+        if (cart.length === 0) {
+            container.innerHTML = '<div style="text-align:center; padding:20px; color:#9ca3af;">No items added</div>';
+            document.getElementById('grandTotal').innerText = '0.000 BHD';
+            return;
+        }
+        let html = '';
+        let subTotal = 0;
+        cart.forEach((item, idx) => {
+            const total = item.price * item.qty;
+            subTotal += total;
+            html += `<div class="cart-item">
+                <span>${item.name}</span>
+                <input type="number" value="${item.qty}" min="0" step="1" onchange="updateQty(${idx}, parseInt(this.value))">
+                <span>${item.price.toFixed(3)}</span>
+                <span>${total.toFixed(3)}</span>
+            </div>`;
+        });
+        container.innerHTML = html;
+        document.getElementById('grandTotal').innerText = subTotal.toFixed(3) + ' BHD';
+    }
+
+    function clearCart() {
+        cart = [];
+        renderCart();
+    }
+
+    function printReceipt() {
+        if (cart.length === 0) {
+            alert('No items in cart!');
+            return;
+        }
+
+        const customerName = document.getElementById('customerName').value || 'Shop Customer';
+        const customerPhone = document.getElementById('customerPhone').value || '';
+        const orderId = Math.floor(Math.random() * 9000) + 1000;
+        const date = new Date();
+        
+        let subTotal = 0;
+        let itemsText = '';
+        cart.forEach(item => {
+            const total = item.price * item.qty;
+            subTotal += total;
+            itemsText += `${item.name}\n   ${item.qty} x ${item.price.toFixed(3)} = ${total.toFixed(3)} BHD\n`;
+        });
+
+        const receiptHTML = `
+            <div style="font-family: monospace; width: 80mm; margin: 0; padding: 8px; font-size: 11px;">
+                <div style="text-align: center;">
+                    <b>FRESH & CLEAN LAUNDRY</b><br>
+                    Block 228, Road 2811, Building 632<br>
+                    Shop 632a, Al Syah, Bahrain<br>
+                    Tel: +973 36817742<br>
+                    --------------------------------<br>
+                    <b>ORDER RECEIPT</b><br>
+                    --------------------------------
+                </div>
+                <div>
+                    Order #: ${orderId}<br>
+                    Date: ${date.toLocaleString()}<br>
+                    Customer: ${customerName}<br>
+                    Phone: ${customerPhone}<br>
+                    --------------------------------<br>
+                    <b>ITEMS:</b><br>
+                    ${itemsText.replace(/\n/g, '<br>')}
+                    --------------------------------<br>
+                    <b>TOTAL: ${subTotal.toFixed(3)} BHD</b><br>
+                    --------------------------------<br>
+                    Ready in 24 hours<br>
+                    Thank you for your business!<br>
+                    <br>
+                    <br>
+                </div>
+            </div>
+        `;
+
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+            <html>
+                <head>
+                    <title>Fresh & Clean Receipt</title>
+                    <style>
+                        body { margin: 0; padding: 0; font-family: monospace; }
+                        @media print {
+                            @page { size: 80mm auto; margin: 0mm; }
+                            body { margin: 0; padding: 0; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    ${receiptHTML}
+                </body>
+            </html>
+        `);
+        printWindow.document.close();
+        printWindow.print();
+    }
+
+    function sendWhatsApp() {
+        if (cart.length === 0) {
+            alert('No items in cart!');
+            return;
+        }
+        const customerName = document.getElementById('customerName').value;
+        const customerPhone = document.getElementById('customerPhone').value;
+        if (!customerPhone) {
+            alert('Please enter customer phone number!');
+            return;
+        }
+        let subTotal = 0;
+        let itemsList = '';
+        cart.forEach(item => {
+            const total = item.price * item.qty;
+            subTotal += total;
+            itemsList += `• ${item.name} x${item.qty} = ${total.toFixed(3)} BHD\n`;
+        });
+        const message = `🧺 FRESH & CLEAN LAUNDRY 🧺\n\n📍 Block 228, Road 2811, Building 632, Shop 632a\n📍 Al Syah, Bahrain\n📞 Shop: +973 36817742\n\n━━━━━━━━━━━━━━━━━━━━\n👤 Customer: ${customerName}\n━━━━━━━━━━━━━━━━━━━━\n\n📋 ORDER SUMMARY\n${itemsList}\n━━━━━━━━━━━━━━━━━━━━\n💰 TOTAL: ${subTotal.toFixed(3)} BHD\n━━━━━━━━━━━━━━━━━━━━\n\n✅ Ready in 24 hours\n🙏 Thank you!`;
+        window.open(`https://wa.me/${customerPhone}?text=${encodeURIComponent(message)}`, '_blank');
+    }
+
+    renderCategories();
+    renderCart();
+</script>
+</body>
+</html>
