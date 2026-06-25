@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fresh & Clean Laundry</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;600;800&display=swap');
+        * { font-family: 'Poppins', sans-serif; }
+        .bg-laundry { background: linear-gradient(135deg, #0F3443 0%, #34E89E 100%); }
+        .gold-text { color: #F9CA24; }
+        .receipt-paper { background: #fff; border-radius: 20px; border-left: 8px solid #34E89E; box-shadow: 0 20px 60px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body class="bg-gray-50">
+
+    <!-- Navbar -->
+    <nav class="bg-laundry p-4 shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-extrabold text-white"><i class="fas fa-soap gold-text mr-2"></i>Fresh <span class="gold-text">&</span> Clean</h1>
+            <div class="space-x-4 text-white">
+                <i class="fas fa-user-cog"></i> <span class="font-semibold" id="tenantDisplay">Admin (Owner)</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <header class="bg-laundry text-white py-16 text-center">
+        <h2 class="text-5xl font-black">Safai Mein <span class="gold-text">Number One</span> <i class="fas fa-star gold-text"></i></h2>
+        <p class="text-xl mt-4 opacity-90">Free Pickup/Drop • 24hr Service • Premium Steam Iron</p>
+        <button onclick="window.location.href='#order'" class="mt-6 bg-gold-500 text-gray-900 font-bold py-3 px-10 rounded-full shadow-xl hover:scale-105 transition bg-yellow-400">Abhi Order Karein</button>
+    </header>
+
+    <!-- Order Form + Receipt Section -->
+    <section id="order" class="container mx-auto px-4 py-12 grid md:grid-cols-2 gap-8">
+        <!-- Left: Order Form -->
+        <div class="bg-white p-8 rounded-3xl shadow-xl">
+            <h3 class="text-2xl font-bold text-[#0F3443] mb-6"><i class="fas fa-tshirt gold-text mr-2"></i>New Order</h3>
+            <input type="text" id="custName" placeholder="Customer Name" class="w-full p-3 border border-gray-200 rounded-xl mb-4 focus:ring-2 focus:ring-[#34E89E]">
+            <input type="text" id="custPhone" placeholder="WhatsApp Number (03XX-XXXXXXX)" class="w-full p-3 border border-gray-200 rounded-xl mb-4 focus:ring-2 focus:ring-[#34E89E]">
+            <textarea id="itemsDesc" rows="3" placeholder="Items (e.g., 2 Shirts, 1 Pant)" class="w-full p-3 border border-gray-200 rounded-xl mb-4 focus:ring-2 focus:ring-[#34E89E]"></textarea>
+            <input type="number" id="totalAmount" placeholder="Total Bill (Rs.)" class="w-full p-3 border border-gray-200 rounded-xl mb-4 focus:ring-2 focus:ring-[#34E89E]">
+            
+            <button onclick="saveOrder()" class="w-full bg-[#0F3443] text-white font-bold py-4 rounded-xl hover:bg-[#34E89E] transition text-lg shadow-lg">
+                <i class="fas fa-save mr-2"></i> Save & Send Receipt
+            </button>
+            <p id="apiStatus" class="text-center mt-4 text-sm text-gray-500"></p>
+        </div>
+
+        <!-- Right: Live Receipt Preview (Jaisa WhatsApp par bhejna hai) -->
+        <div class="receipt-paper p-8">
+            <div class="text-center border-b-2 border-dashed border-gray-200 pb-4">
+                <i class="fas fa-soap text-4xl text-[#34E89E]"></i>
+                <h4 class="text-2xl font-black text-[#0F3443]">Fresh & Clean Laundry</h4>
+                <p class="text-sm text-gray-400">⭐ Premium Quality ⭐</p>
+            </div>
+            <div id="receiptBody" class="py-4 space-y-3">
+                <div class="flex justify-between"><span class="text-gray-500">Customer</span> <span class="font-semibold" id="rName">Fazal Ahmed</span></div>
+                <div class="flex justify-between"><span class="text-gray-500">Items</span> <span class="font-semibold" id="rItems">-</span></div>
+                <div class="flex justify-between"><span class="text-gray-500">Total</span> <span class="font-bold text-xl text-[#0F3443]" id="rTotal">Rs. 0</span></div>
+            </div>
+            <div class="border-t-2 border-dashed border-gray-200 pt-4 flex justify-between items-center">
+                <span class="text-xs text-gray-400">🧾 #ORD-001</span>
+                <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-bold">PAID</span>
+            </div>
+            <button onclick="sendWhatsAppReceipt()" class="mt-6 w-full bg-[#25D366] text-white font-bold py-3 rounded-xl hover:bg-green-600 transition">
+                <i class="fab fa-whatsapp mr-2"></i> WhatsApp par Bhejein (PDF)
+            </button>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-[#0F3443] text-white text-center py-6 mt-12">
+        <p>© 2025 Fresh & Clean Laundry | Multi-Tenant System</p>
+        <p class="text-xs opacity-50">Backend API Render.com | Hosted on GitHub Pages</p>
+    </footer>
+
+    <script>
+        // Backend API URL (Render par deploy karnay ke baad ye URL change karna)
+        const API_URL = 'https://your-backend.onrender.com/api/orders'; 
+
+        // Order Save karna aur Receipt update karna
+        async function saveOrder() {
+            const name = document.getElementById('custName').value || 'Guest';
+            const phone = document.getElementById('custPhone').value;
+            const items = document.getElementById('itemsDesc').value || 'Wash & Iron';
+            const total = document.getElementById('totalAmount').value || '0';
+
+            // UI Receipt update karo
+            document.getElementById('rName').innerText = name;
+            document.getElementById('rItems').innerText = items;
+            document.getElementById('rTotal').innerText = `Rs. ${total}`;
+
+            // Backend par data bhejo (Database mein save hoga)
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        tenantId: 'fresh_and_clean', // Ye aapki ID hai
+                        customer: name, 
+                        phone: phone, 
+                        items: items, 
+                        total: parseFloat(total) 
+                    })
+                });
+                const data = await response.json();
+                document.getElementById('apiStatus').innerHTML = `✅ Order Saved! ID: ${data.id}`;
+            } catch (error) {
+                document.getElementById('apiStatus').innerHTML = `⚠️ Backend offline? Error: ${error.message}`;
+            }
+        }
+
+        // WhatsApp Receipt bhejna (Backend ko trigger karega)
+        async function sendWhatsAppReceipt() {
+            const phone = document.getElementById('custPhone').value;
+            if (!phone) { alert('Pehle Customer Number likhein!'); return; }
+            
+            const name = document.getElementById('rName').innerText;
+            const items = document.getElementById('rItems').innerText;
+            const total = document.getElementById('rTotal').innerText;
+
+            // Backend ko bolein ke ye PDF bana kar WhatsApp par bheje
+            alert(`📤 System ${phone} par receipt bhej raha hai... (Backend connected hona chahiye)`);
+            
+            // Asli code backend mein likha hai (server.js dekhein)
+            window.open(`https://wa.me/92${phone.replace(/\D/g,'')}?text=🧾%20Fresh%20&%20Clean%20Laundry%0A👤%20${name}%0A👕%20${items}%0A💰%20${total}%0A✅%20Shukriya!`, '_blank');
+        }
+    </script>
+</body>
+</html>
